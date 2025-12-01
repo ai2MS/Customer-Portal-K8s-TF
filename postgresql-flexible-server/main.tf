@@ -58,6 +58,17 @@ resource "azurerm_postgresql_flexible_server" "main" {
   }
 
   tags = var.tags
+
+  lifecycle {
+    ignore_changes = [
+      tags["CreatedAt"],
+      tags["CreatedBy"],
+      tags["LastUpdatedAt"],
+      tags["LastUpdatedBy"],
+      tags["PreviouslyUpdatedAt"],
+      tags["PreviouslyUpdatedBy"]
+    ]
+  }
 }
 
 # https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/postgresql_flexible_server_configuration
