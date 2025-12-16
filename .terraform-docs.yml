@@ -50,14 +50,6 @@ content: |-
   {{ .Outputs }}
 
   ---
-  
-  ## Example
-
-  ```hcl
-  {{ include "examples/main.tf" }}
-  ```
-  
-  ---
 
   ## 📚 Useful links
 
@@ -70,7 +62,7 @@ content: |-
   - [Azure DevOps](https://dev.azure.com/sudheera-jayasinghe)
   - [Azure resource naming](https://learn.microsoft.com/en-us/azure/cloud-adoption-framework/ready/azure-best-practices/resource-naming)
   - [Azure resource abbreviations](https://learn.microsoft.com/en-us/azure/cloud-adoption-framework/ready/azure-best-practices/resource-abbreviations)
-  
+
 
 output:
   file: "README.md"
