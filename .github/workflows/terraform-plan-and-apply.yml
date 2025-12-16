@@ -1,0 +1,393 @@
+name: terraform-plan-and-apply
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        type: string
+        description: Deployment environment
+        required: true
+      deployment_type:
+        type: string
+        description: Deployment type
+        required: true
+      deployment_action:
+        type: string
+        description: Action to perform
+        required: true
+      terraform_version:
+        type: string
+        description: Terraform version
+        required: false
+        default: "1.13.5"
+      resource_group_name:
+        type: string
+        description: Resource group name
+        required: false
+        default: ""
+      key_vault_name:
+        type: string
+        description: Key vault name
+        required: false
+        default: ""
+    secrets:
+      TERRAFORM_TOKEN:
+        description: Terraform Cloud token
+        required: true
+      AZURE_CREDENTIALS:
+        description: Azure CLI credentials
+        required: true
+
+permissions:
+  contents: read
+
+env:
+  TF_CLOUD_ORGANIZATION: "Kochasoft-Test"
+  TF_CLOUD_PROJECT: "Kochasoft-Portal"
+  TF_WORKSPACE: "portal-microk8s-${{ inputs.environment }}"
+
+jobs:
+  overview:
+    name: Overview
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Display Logo
+        run: |
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          cat .github/scripts/logo.txt >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo '   ```' >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Display in console
+          cat .github/scripts/logo.txt
+
+      - name: Display Deployment Info
+        run: |
+          echo "### Deployment Information" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| **Triggered By** | @${{ github.actor }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Environment** | ${{ inputs.environment }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Action** | ${{ inputs.deployment_action }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Type** | ${{ inputs.deployment_type }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Resources will be tagged with: \`github:${{ github.actor }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+  validate:
+    name: Terraform Validate
+    runs-on: ubuntu-latest
+    needs: overview
+    defaults:
+      run:
+        shell: bash
+        working-directory: ./src
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ inputs.terraform_version }}
+          cli_config_credentials_token: "${{ secrets.TERRAFORM_TOKEN }}"
+
+      - name: Terraform Init
+        run: terraform init
+
+      - name: Check formatting
+        run: terraform fmt -check -recursive
+        continue-on-error: true
+
+      - name: Terraform Validate
+        run: terraform validate
+
+  plan:
+    name: Terraform Plan
+    runs-on: ubuntu-latest
+    needs: validate
+    defaults:
+      run:
+        shell: bash
+        working-directory: ./src
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Azure CLI
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Enable public access to Azure resources
+        uses: azure/cli@v2
+        if: ${{ inputs.resource_group_name != '' && inputs.key_vault_name != '' }}
+        with:
+          azcliversion: latest
+          inlineScript: |
+            echo "az keyvault network-rule add --resource-group ${{ inputs.resource_group_name }} --name ${{ inputs.key_vault_name }} --ip-address 0.0.0.0/0"
+            az keyvault network-rule add --resource-group ${{ inputs.resource_group_name }} --name ${{ inputs.key_vault_name }} --ip-address 0.0.0.0/0
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ inputs.terraform_version }}
+          cli_config_credentials_token: "${{ secrets.TERRAFORM_TOKEN }}"
+
+      - name: Terraform Init
+        run: terraform init
+
+      - name: Terraform Plan
+        id: plan
+        env:
+          # Dynamic user tracking for resource tags
+          TF_VAR_github_actor: ${{ github.actor }}
+          TF_VAR_git_user_email: ${{ github.actor }}@users.noreply.github.com
+          TF_VAR_system_user: github-actions
+        run: |
+          export exitcode=0
+          terraform plan -input=false -detailed-exitcode -no-color -out tfplan || export exitcode=$?
+          
+          echo "exitcode=$exitcode" >> $GITHUB_OUTPUT
+          
+          if [ $exitcode -eq 1 ]; then
+            echo Terraform Plan Failed!
+            exit 1
+          else 
+            exit 0
+          fi
+
+      - name: Disable public access to Azure resources
+        uses: azure/cli@v2
+        if: ${{ inputs.resource_group_name != '' && inputs.key_vault_name != '' && (success() || failure()) }}
+        with:
+          azcliversion: latest
+          inlineScript: |
+            echo "az keyvault network-rule remove --resource-group ${{ inputs.resource_group_name }} --name ${{ inputs.key_vault_name }} --ip-address 0.0.0.0/0"
+            az keyvault network-rule remove --resource-group ${{ inputs.resource_group_name }} --name ${{ inputs.key_vault_name }} --ip-address 0.0.0.0/0
+
+      - name: Capture Terraform Plan Output
+        id: plan-info
+        run: |
+          TERRAFORM_PLAN=$(terraform show -no-color tfplan)
+          
+          delimiter="$(openssl rand -hex 8)"
+          echo "summary<<${delimiter}" >> $GITHUB_OUTPUT
+          echo "## Terraform Plan Output" >> $GITHUB_OUTPUT
+          echo "<details><summary>Click to expand</summary>" >> $GITHUB_OUTPUT
+          echo "" >> $GITHUB_OUTPUT
+          echo '```terraform' >> $GITHUB_OUTPUT
+          echo "$TERRAFORM_PLAN" >> $GITHUB_OUTPUT
+          echo '```' >> $GITHUB_OUTPUT
+          echo "</details>" >> $GITHUB_OUTPUT
+          echo "${delimiter}" >> $GITHUB_OUTPUT
+
+      - name: Publish Terraform Plan Output
+        env:
+          SUMMARY: ${{ steps.plan-info.outputs.summary }}
+        run: |
+          echo "$SUMMARY" >> $GITHUB_STEP_SUMMARY
+
+      - name: Upload Plan Artifact
+        if: ${{ inputs.deployment_action == 'apply' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: tfplan
+          path: ./src/tfplan
+
+  apply:
+    name: Terraform Apply
+    runs-on: ubuntu-latest
+    needs: plan
+    if: ${{ inputs.deployment_action == 'apply' }}
+    environment:
+      name: "${{ inputs.environment }}"
+    defaults:
+      run:
+        shell: bash
+        working-directory: ./src
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Azure CLI
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Enable public access to Azure resources
+        uses: azure/cli@v2
+        if: ${{ inputs.resource_group_name != '' && inputs.key_vault_name != '' }}
+        with:
+          azcliversion: latest
+          inlineScript: |
+            echo "az keyvault network-rule add --resource-group ${{ inputs.resource_group_name }} --name ${{ inputs.key_vault_name }} --ip-address 0.0.0.0/0"
+            az keyvault network-rule add --resource-group ${{ inputs.resource_group_name }} --name ${{ inputs.key_vault_name }} --ip-address 0.0.0.0/0
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ inputs.terraform_version }}
+          cli_config_credentials_token: "${{ secrets.TERRAFORM_TOKEN }}"
+
+      - name: Download Plan Artifact
+        uses: actions/download-artifact@v5
+        with:
+          name: tfplan
+          path: ./src
+
+      - name: Terraform Init
+        run: terraform init
+
+      - name: Terraform Apply
+        env:
+          # Dynamic user tracking for resource tags
+          TF_VAR_github_actor: ${{ github.actor }}
+          TF_VAR_git_user_email: ${{ github.actor }}@users.noreply.github.com
+          TF_VAR_system_user: github-actions
+        run: terraform apply -input=false -auto-approve tfplan
+
+      - name: Disable public access to Azure resources
+        uses: azure/cli@v2
+        if: ${{ inputs.resource_group_name != '' && inputs.key_vault_name != '' && (success() || failure()) }}
+        with:
+          azcliversion: latest
+          inlineScript: |
+            echo "az keyvault network-rule remove --resource-group ${{ inputs.resource_group_name }} --name ${{ inputs.key_vault_name }} --ip-address 0.0.0.0/0"
+            az keyvault network-rule remove --resource-group ${{ inputs.resource_group_name }} --name ${{ inputs.key_vault_name }} --ip-address 0.0.0.0/0
+
+  graph:
+    name: Terraform Graph
+    runs-on: ubuntu-latest
+    needs: apply
+    defaults:
+      run:
+        shell: bash
+        working-directory: ./src
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ inputs.terraform_version }}
+          cli_config_credentials_token: "${{ secrets.TERRAFORM_TOKEN }}"
+
+      - name: Install Graphviz
+        run: sudo apt-get update && sudo apt-get install -y graphviz
+
+      - name: Terraform Init
+        run: terraform init
+
+      - name: Generate and Display Terraform Graph
+        id: graph
+        run: |
+          # Generate base graph from Terraform
+          terraform graph -type=plan > terraform-graph.dot
+          
+          # Count graph statistics
+          TOTAL_NODES=$(grep -c '^\s*"' terraform-graph.dot || echo "0")
+          TOTAL_EDGES=$(grep -c ' -> ' terraform-graph.dot || echo "0")
+          RESOURCES=$(grep -c 'label = ".*\[root\]' terraform-graph.dot || echo "0")
+          
+          # Post-process DOT file to add custom styling
+          cat > styled-graph.dot << 'EOF'
+          digraph {
+            # Graph styling
+            bgcolor="#ffffff"
+            fontname="Arial"
+            fontsize=10
+            rankdir="LR"
+            ranksep=0.75
+            nodesep=0.5
+            splines=polyline
+          
+            # Default node styling
+            node [
+              shape=box
+              style="rounded,filled"
+              fillcolor="#e3f2fd"
+              color="#1976d2"
+              fontname="Arial"
+              fontsize=10
+              fontcolor="#000000"
+              penwidth=1.5
+              margin=0.15
+              height=0.4
+            ]
+          
+            # Default edge styling
+            edge [
+              color="#757575"
+              arrowsize=0.6
+              penwidth=1
+            ]
+          EOF
+          
+          # Append terraform graph content (skip first line which is 'digraph {')
+          tail -n +2 terraform-graph.dot >> styled-graph.dot
+          
+          # Convert to PNG with size limit for GitHub summary (smaller, faster)
+          dot -Tpng -Gdpi=96 styled-graph.dot > terraform-graph-preview.png
+          
+          # Convert to high-res SVG for download
+          dot -Tsvg styled-graph.dot > terraform-graph.svg
+          
+          # Get file sizes
+          SVG_SIZE=$(du -h terraform-graph.svg | cut -f1)
+          PNG_SIZE=$(du -h terraform-graph-preview.png | cut -f1)
+          
+          # Check if PNG is small enough to embed (< 1MB)
+          # Use Linux stat syntax (GitHub Actions runs on Ubuntu)
+          PNG_BYTES=$(stat -c%s terraform-graph-preview.png)
+          
+          # Add to GitHub summary
+          echo "## 📊 Terraform Dependency Graph" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Graph Statistics" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Metric | Count |" >> $GITHUB_STEP_SUMMARY
+          echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Total Nodes | $TOTAL_NODES |" >> $GITHUB_STEP_SUMMARY
+          echo "| Total Edges | $TOTAL_EDGES |" >> $GITHUB_STEP_SUMMARY
+          echo "| Resources | ~$RESOURCES |" >> $GITHUB_STEP_SUMMARY
+          echo "| SVG Size | $SVG_SIZE |" >> $GITHUB_STEP_SUMMARY
+          echo "| Preview Size | $PNG_SIZE |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [ $PNG_BYTES -lt 1048576 ]; then
+            # PNG is small enough, embed it
+            echo "<details><summary>📈 Click to view graph preview</summary>" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo '<div style="overflow: auto; max-width: 100%; background: white; border: 1px solid #ddd; border-radius: 4px; padding: 10px;">' >> $GITHUB_STEP_SUMMARY
+            # Use tr -d to remove newlines for cross-platform compatibility
+            echo '<img src="data:image/png;base64,'$(base64 terraform-graph-preview.png | tr -d '\n')'" style="max-width: 100%; height: auto;" />' >> $GITHUB_STEP_SUMMARY
+            echo '</div>' >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "</details>" >> $GITHUB_STEP_SUMMARY
+          else
+            # PNG is too large, just provide download link
+            echo "⚠️ **Graph is too large to display inline**" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "💾 **Download full graph**: Use the 'terraform-graph' artifact below for the complete SVG file" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+      - name: Upload Graph Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: terraform-graph
+          path: |
+            ./src/terraform-graph.svg
+            ./src/terraform-graph-preview.png
+            ./src/terraform-graph.dot

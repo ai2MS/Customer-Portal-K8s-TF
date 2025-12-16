@@ -1,0 +1,36 @@
+name: terraform-plan-and-apply-qa
+
+on:
+  push:
+    branches:
+      - main
+      - 'feature/**'
+  workflow_dispatch:
+    inputs:
+      deployment_type:
+        type: choice
+        description: Deployment type
+        options:
+          - apply
+          - destroy
+        required: true
+        default: apply
+      deployment_action:
+        type: choice
+        description: Action to perform
+        options:
+          - plan
+          - apply
+        required: true
+        default: plan
+
+jobs:
+  plan-and-apply:
+    uses: ./.github/workflows/terraform-plan-and-apply.yml
+    with:
+      environment: "qa"
+      deployment_type: ${{ inputs.deployment_type || 'apply' }}
+      deployment_action: ${{ inputs.deployment_action || 'plan' }}
+    secrets:
+      TERRAFORM_TOKEN: ${{ secrets.TF_TOKEN_app_terraform_io }}
+      AZURE_CREDENTIALS: ${{ secrets.AZURE_CREDENTIALS_QA }}
