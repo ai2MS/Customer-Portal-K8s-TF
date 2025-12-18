@@ -23,6 +23,29 @@ module "key_vault_main" {
     ]
   }
 
+  access_policies = [
+    {
+      tenant_id = data.azurerm_client_config.current.tenant_id
+      object_id = "3465e769-6600-41c6-893f-85a12cac7cb3"
+
+      certificate_permissions = [
+        "Backup", "Create", "Delete", "DeleteIssuers", "Get", "GetIssuers", "Import", "List", "ListIssuers", "ManageContacts", "ManageIssuers", "Purge", "Recover", "Restore", "SetIssuers", "Update"
+      ]
+
+      key_permissions = [
+        "Backup", "Create", "Decrypt", "Delete", "Encrypt", "Get", "Import", "List", "Purge", "Recover", "Restore", "Sign", "UnwrapKey", "Update", "Verify", "WrapKey", "Release", "Rotate", "GetRotationPolicy", "SetRotationPolicy"
+      ]
+
+      secret_permissions = [
+        "Backup", "Delete", "Get", "List", "Purge", "Recover", "Restore", "Set"
+      ]
+
+      storage_permissions = [
+        "Backup", "Delete", "DeleteSAS", "Get", "GetSAS", "List", "ListSAS", "Purge", "Recover", "RegenerateKey", "Restore", "Set", "SetSAS", "Update"
+      ]
+    }
+  ]
+
   tags = merge(local.default_tags, {
     Service = "Security"
     Purpose = "AKS Key Vault"
