@@ -34,3 +34,21 @@ variable "owner" {
   type        = string
   default     = "terraform"
 }
+
+variable "virtual_network_address_space" {
+  description = "Address space for the virtual network"
+  type        = string
+  nullable    = false
+}
+
+variable "virtual_network_virtual_machines_subnet_address_space" {
+  description = "Address space for the virtual machines subnet of the virtual network"
+  type        = string
+  nullable    = false
+}
+
+variable "virtual_network_vault_subnet_address_space" {
+  description = "Address space for the key vault subnet of the virtual network"
+  type        = string
+  nullable    = false
+}

@@ -11,6 +11,18 @@ terraform {
       source  = "hashicorp/azurerm"
       version = "~> 4.40.0"
     }
+    cloudinit = {
+      source  = "hashicorp/cloudinit"
+      version = "~> 2.3.0"
+    }
+    random = {
+      source  = "hashicorp/random"
+      version = "~> 3.7.0"
+    }
+    tls = {
+      source  = "hashicorp/tls"
+      version = "~> 4.1.0"
+    }
   }
 }
 
@@ -36,7 +48,7 @@ locals {
     LastUpdatedAt = local.current_time
   }
 
-  # Following naming convention: KSAI-AZR-DEV-EUS1-RGrp
+  # Following naming convention: KSAI-AZR-DEV-CAC1
   default_name    = "${upper(var.project)}-${upper(var.cloud)}-${upper(var.env)}-${upper(var.location_code)}"
   default_name_an = lower("${var.project}${var.cloud}${var.env}${var.location_code}")
 }
