@@ -6,25 +6,12 @@ packages:
   - snapd
 
 runcmd:
-  # Install MicroK8s with configurable channel
   - snap install microk8s --classic --channel=${microk8s_channel}
-
-  # Add user to microk8s group
   - usermod -a -G microk8s ${vm_user}
-
-  # Prepare kube config directory
   - mkdir -p /home/${vm_user}/.kube
   - chown -R ${vm_user}:${vm_user} /home/${vm_user}/.kube
-
-  # Wait until MicroK8s is ready
   - microk8s status --wait-ready
-
-  # Enable addons (customizable if needed)
   - microk8s enable dns storage ingress
-
-  # Export kubeconfig for the user
   - microk8s config > /home/${vm_user}/.kube/config
   - chown ${vm_user}:${vm_user} /home/${vm_user}/.kube/config
-
-  # Optional kubectl alias
   - snap alias microk8s.kubectl kubectl
