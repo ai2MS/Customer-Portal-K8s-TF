@@ -6,7 +6,7 @@ module "linux_virtual_machine_main" {
   resource_group_name = module.resource_group_main.name
   name                = "${local.default_name}-VM-CEC-K8s"
 
-  size                  = "Standard_D2ps_v6"
+  size                  = "Standard_B2s"
   network_interface_ids = [module.network_interface_main.id]
 
   admin_credentials = {
@@ -21,15 +21,16 @@ module "linux_virtual_machine_main" {
   }
 
   os_disk = {
-    storage_account_type = "Premium_LRS"
+    storage_account_type = "StandardSSD_LRS"
     caching              = "None"
-    disk_size_gb         = 64
+    disk_size_gb         = 30
   }
 
   cloud_init_config = {
     template_file_path = "cloud-init.tftpl"
     template_vars = {
-      key_test = "value-test"
+	    vm_user           = "azadmin"
+	    microk8s_channel  = "1.29/stable"
     }
   }
 
