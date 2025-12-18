@@ -15,8 +15,8 @@ module "linux_virtual_machine_main" {
 
   source_image_reference = {
     publisher = "Canonical"
-    offer     = "ubuntu-24_04-lts"
-    sku       = "server-arm64"
+    offer     = "0001-com-ubuntu-server-noble"
+    sku       = "24_04-lts"
     version   = "latest"
   }
 
