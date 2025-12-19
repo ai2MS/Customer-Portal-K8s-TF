@@ -20,13 +20,13 @@ variable "env" {
 variable "location" {
   description = "Azure region"
   type        = string
-  default     = "Canada Central"
+  default     = "Canada East"
 }
 
 variable "location_code" {
   description = "Azure region code"
   type        = string
-  default     = "cac1"
+  default     = "cae1"
 }
 
 variable "owner" {
@@ -51,4 +51,32 @@ variable "virtual_network_vault_subnet_address_space" {
   description = "Address space for the key vault subnet of the virtual network"
   type        = string
   nullable    = false
+}
+
+variable "virtual_machine_size" {
+  description = "Size of the virtual machine"
+  type        = string
+  nullable    = false
+  default     = "Standard_F8s_v2"
+}
+
+variable "virtual_machine_source_image_offer" {
+  description = "Offer of the source image of the virtual machine"
+  type        = string
+  nullable    = false
+  default     = "0001-com-ubuntu-server-jammy"
+}
+
+variable "virtual_machine_source_image_sku" {
+  description = "SKU of the source image of the virtual machine"
+  type        = string
+  nullable    = false
+  default     = "22_04-lts"
+}
+
+variable "virtual_machine_os_disk_storage_account_type" {
+  description = "Storage account type of the os disk of the virtual machine"
+  type        = string
+  nullable    = false
+  default     = "StandardSSD_LRS"
 }

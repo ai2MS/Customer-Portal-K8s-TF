@@ -4,14 +4,134 @@ package_upgrade: true
 
 packages:
   - snapd
+  - python3
+  - python3-pip
+  - python3-venv
+
+write_files:
+  - path: /root/install-packages.yml
+    owner: root:root
+    permissions: "0644"
+    content: |
+      ---
+      - name: Install required packages
+        hosts: localhost
+        remote_user: ${vm_user}
+        gather_facts: yes
+        become: true
+
+        tasks:
+					- name: Create microsoft keyring directory
+					  file:
+					    path: /etc/apt/keyrings
+					    state: directory
+					    mode: '0755'
+
+					- name: Download and add microsoft gpg key
+					  shell: |
+					    curl -sLS https://packages.microsoft.com/keys/microsoft.asc \
+					      | gpg --dearmor | tee /etc/apt/keyrings/microsoft.gpg > /dev/null
+					  args:
+					    creates: /etc/apt/keyrings/microsoft.gpg
+
+					- name: Ensure key permissions
+					  file:
+					    path: /etc/apt/keyrings/microsoft.gpg
+					    mode: '0644'
+
+					- name: Add azure cli apt repository
+					  shell: |
+					    AZ_DIST=$(lsb_release -cs)
+					    echo "Types: deb
+					    URIs: https://packages.microsoft.com/repos/azure-cli/
+					    Suites: ${AZ_DIST}
+					    Components: main
+					    Architectures: $(dpkg --print-architecture)
+					    Signed-by: /etc/apt/keyrings/microsoft.gpg" \
+					      | tee /etc/apt/sources.list.d/azure-cli.sources
+					  args:
+					    creates: /etc/apt/sources.list.d/azure-cli.sources
+
+          - name: Install base packages
+            apt:
+              name:
+                - curl
+                - unzip
+                - gnupg
+                - git
+					      - apt-transport-https
+					      - ca-certificates
+					      - lsb-release
+              state: present
+
+          - name: Update apt cache
+            apt:
+              update_cache: yes
+
+          - name: Install microk8s
+            snap:
+              name: microk8s
+              classic: true
+              channel: ${microk8s_channel}
+
+          - name: Install helm
+            snap:
+              name: helm
+              classic: true
+
+          - name: Install docker
+            snap:
+              name: docker
+
+          - name: Install azure cli
+					  apt:
+					    name: azure-cli
+					    state: present
+
+          - name: Install ollama
+            shell: curl -fsSL https://ollama.com/install.sh | sh
+            args:
+              creates: /usr/local/bin/ollama
+
+          - name: Add current user to microk8s group
+            user:
+              name: "{{ ansible_user_id }}"
+              groups: microk8s
+              append: true
+
+          - name: Enable microk8s addons
+            shell: |
+              microk8s status --wait-ready
+              microk8s enable dns storage ingress
+            args:
+              creates: /var/snap/microk8s/current/args/kubelet
+
+          - name: Create kube config directory
+            file:
+              path: "/home/{{ ansible_user_id }}/.kube"
+              state: directory
+              owner: "{{ ansible_user_id }}"
+              mode: "0755"
+
+          - name: Export microk8s kubeconfig
+            shell: |
+              microk8s config > /home/{{ ansible_user_id }}/.kube/config
+            args:
+              creates: "/home/{{ ansible_user_id }}/.kube/config"
+
+          - name: Fix kubeconfig permissions
+            file:
+              path: "/home/{{ ansible_user_id }}/.kube/config"
+              owner: "{{ ansible_user_id }}"
+              mode: "0600"
+
+			    - name: Create kubectl alias from microk8s
+			      command: snap alias microk8s.kubectl kubectl
+			      args:
+			        creates: /snap/bin/kubectl
 
 runcmd:
-  - snap install microk8s --classic --channel=${microk8s_channel}
-  - usermod -a -G microk8s ${vm_user}
-  - mkdir -p /home/${vm_user}/.kube
-  - chown -R ${vm_user}:${vm_user} /home/${vm_user}/.kube
-  - microk8s status --wait-ready
-  - microk8s enable dns storage ingress
-  - microk8s config > /home/${vm_user}/.kube/config
-  - chown ${vm_user}:${vm_user} /home/${vm_user}/.kube/config
-  - snap alias microk8s.kubectl kubectl
+  - [ systemctl, enable, --now, snapd.socket ]
+  - [ python3, -m, pip, install, --upgrade, pip ]
+  - [ python3, -m, pip, install, ansible ]
+  - [ ansible-playbook, /root/install-packages.yml ]

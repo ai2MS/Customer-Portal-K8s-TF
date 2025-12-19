@@ -6,22 +6,23 @@ module "linux_virtual_machine_main" {
   resource_group_name = module.resource_group_main.name
   name                = "${local.default_name}-VM-CEC-K8s"
 
-  size                  = "Standard_B2s"
+  size                  = var.virtual_machine_size
   network_interface_ids = [module.network_interface_main.id]
 
   admin_credentials = {
+    username     = "azadmin"
     key_vault_id = module.key_vault_main.id
   }
 
   source_image_reference = {
     publisher = "Canonical"
-    offer     = "0001-com-ubuntu-server-jammy"
-    sku       = "22_04-lts"
+    offer     = var.virtual_machine_source_image_offer
+    sku       = var.virtual_machine_source_image_sku
     version   = "latest"
   }
 
   os_disk = {
-    storage_account_type = "StandardSSD_LRS"
+    storage_account_type = var.virtual_machine_os_disk_storage_account_type
     caching              = "None"
   }
 
@@ -36,7 +37,7 @@ module "linux_virtual_machine_main" {
   secret_dependencies = [module.key_vault_main.data_access_dependency]
 
   tags = merge(local.default_tags, {
-    Service = "Network"
-    Purpose = "Virtual Security Group"
+    Service = "Compute"
+    Purpose = "MicroK8s Server"
   })
 }
