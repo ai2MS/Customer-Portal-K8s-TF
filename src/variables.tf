@@ -53,6 +53,12 @@ variable "virtual_network_vault_subnet_address_space" {
   nullable    = false
 }
 
+variable "virtual_network_bastion_subnet_address_space" {
+  description = "Address space for the bastion subnet of the virtual network"
+  type        = string
+  nullable    = false
+}
+
 variable "virtual_machine_size" {
   description = "Size of the virtual machine"
   type        = string

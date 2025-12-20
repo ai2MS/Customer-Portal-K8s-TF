@@ -14,3 +14,17 @@ module "virtual_network_main" {
     Purpose = "Virtual Network"
   })
 }
+
+resource "azurerm_bastion_host" "main" {
+  location            = module.resource_group_main.location
+  resource_group_name = module.resource_group_main.name
+  name                = "${local.default_name}-BST-CEC-K8s"
+
+  sku                = "Developer"
+  virtual_network_id = module.virtual_network_main.id
+
+  tags = merge(local.default_tags, {
+    Service = "Network"
+    Purpose = "Bastion Access"
+  })
+}

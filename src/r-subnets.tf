@@ -29,3 +29,15 @@ module "subnet_vault" {
   enable_network_security_group_association = true
   network_security_group_id                 = module.network_security_group_vault.id
 }
+
+module "subnet_bastion" {
+  source  = "app.terraform.io/Kochasoft-Test/subnet/azurerm"
+  version = "1.2.8"
+
+  resource_group_name  = module.resource_group_main.name
+  virtual_network_name = module.virtual_network_main.name
+
+  name = "AzureBastionSubnet"
+
+  address_prefixes = [var.virtual_network_bastion_subnet_address_space]
+}
