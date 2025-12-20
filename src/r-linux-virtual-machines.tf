@@ -10,7 +10,7 @@ module "linux_virtual_machine_main" {
   network_interface_ids = [module.network_interface_main.id]
 
   admin_credentials = {
-    username     = "azadmin"
+    username     = var.virtual_machine_admin_username
     key_vault_id = module.key_vault_main.id
   }
 
@@ -29,7 +29,7 @@ module "linux_virtual_machine_main" {
   cloud_init_config = {
     template_file_path = "cloud-init.yml.tftpl"
     template_vars = {
-      admin_username    = "azadmin"
+      admin_username    = var.virtual_machine_admin_username
       microk8s_channel  = "1.29/stable"
       ansible_version   = "10.7.0"
       azure_cli_version = "2.81.0"

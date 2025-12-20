@@ -59,6 +59,13 @@ variable "virtual_network_bastion_subnet_address_space" {
   nullable    = false
 }
 
+variable "virtual_machine_admin_username" {
+  description = "Admin username of the virtual machine"
+  type        = string
+  nullable    = false
+  default     = "azadmin"
+}
+
 variable "virtual_machine_size" {
   description = "Size of the virtual machine"
   type        = string
