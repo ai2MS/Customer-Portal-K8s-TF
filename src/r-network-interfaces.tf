@@ -8,10 +8,9 @@ module "network_interface_main" {
 
   ip_configurations = [
     {
-      name                 = "${local.default_name}-IpCf-CEC-K8s"
-      primary              = true
-      subnet_id            = module.subnet_virtual_machines.id
-      public_ip_address_id = azurerm_public_ip.main.id
+      name      = "${local.default_name}-IpCf-CEC-K8s"
+      primary   = true
+      subnet_id = module.subnet_virtual_machines.id
     }
   ]
 
