@@ -28,9 +28,9 @@ write_files:
                 - unzip
                 - gnupg
                 - git
-					      - apt-transport-https
-					      - ca-certificates
-					      - lsb-release
+                - apt-transport-https
+                - ca-certificates
+                - lsb-release
               state: present
 
           - name: Update apt cache
@@ -89,13 +89,14 @@ write_files:
               owner: "{{ ansible_user_id }}"
               mode: "0600"
 
-			    - name: Create kubectl alias from microk8s
-			      command: snap alias microk8s.kubectl kubectl
-			      args:
-			        creates: /snap/bin/kubectl
+          - name: Create kubectl alias from microk8s
+            command: snap alias microk8s.kubectl kubectl
+            args:
+              creates: /snap/bin/kubectl
 
 runcmd:
   - [ systemctl, enable, --now, snapd.socket ]
   - [ python3, -m, pip, install, --upgrade, pip ]
   - [ python3, -m, pip, install, ansible==${ansible_version}, azure-cli==${azure_cli_version} ]
+  - [ az, login, --identity ]
   - [ ansible-playbook, /root/install-packages.yml ]

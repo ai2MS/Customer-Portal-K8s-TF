@@ -23,7 +23,7 @@ module "network_security_group_virtual_machines" {
 
   tags = merge(local.default_tags, {
     Service = "Network"
-    Purpose = "Virtual Security Group"
+    Purpose = "Network Security Group"
   })
 }
 
@@ -38,6 +38,6 @@ module "network_security_group_vault" {
 
   tags = merge(local.default_tags, {
     Service = "Network"
-    Purpose = "Virtual Security Group"
+    Purpose = "Network Security Group"
   })
 }

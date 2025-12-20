@@ -17,7 +17,7 @@ module "network_interface_main" {
 
   tags = merge(local.default_tags, {
     Service = "Network"
-    Purpose = "Virtual Security Group"
+    Purpose = "K8s Network Interface"
   })
 }
 

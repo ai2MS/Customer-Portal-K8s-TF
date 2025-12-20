@@ -48,6 +48,6 @@ module "key_vault_main" {
 
   tags = merge(local.default_tags, {
     Service = "Security"
-    Purpose = "AKS Key Vault"
+    Purpose = "K8s Key Vault"
   })
 }

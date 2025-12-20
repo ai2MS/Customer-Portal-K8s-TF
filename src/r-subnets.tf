@@ -23,7 +23,8 @@ module "subnet_vault" {
 
   name = lower("${local.default_name}-SNET-VAULT")
 
-  address_prefixes = [var.virtual_network_vault_subnet_address_space]
+  address_prefixes  = [var.virtual_network_vault_subnet_address_space]
+  service_endpoints = []
 
   enable_network_security_group_association = true
   network_security_group_id                 = module.network_security_group_vault.id

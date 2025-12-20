@@ -11,6 +11,6 @@ module "public_ip_main" {
 
   tags = merge(local.default_tags, {
     Service = "Networking"
-    Purpose = "Private Endpoint for Vault"
+    Purpose = "Public IP for the Virtual Machine"
   })
 }
