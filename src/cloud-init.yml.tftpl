@@ -99,6 +99,37 @@ write_files:
             args:
               creates: /usr/local/bin/kubelogin
 
+  - path: /root/.env
+    owner: root:root
+    permissions: "0600"
+    content: |
+      # GHCR CREDENTIALS
+      GITHUB_USERNAME=${env_github_username}
+      GITHUB_EMAIL=${env_github_email}
+
+      # INFRASTRUCTURE SECRETS
+      POSTGRES_PASSWORD=${env_postgres_password}
+      REDIS_PASSWORD=${env_redis_password}
+      QDRANT_API_KEY=${env_qdrant_api_key}
+      
+      # AIOPS-DYNATRACE-KAFKA SECRETS
+      DYNATRACE_API_TOKEN=${env_dynatrace_api_token}
+
+      # AIOPS-MCPSVR-SNOW SECRETS
+      SERVICENOW_INSTANCE_URL=${env_servicenow_instance_url}
+      SERVICENOW_USERNAME=${env_servicenow_username}
+      SERVICENOW_PASSWORD=${env_servicenow_password}
+      SERVICENOW_API_KEY=${env_servicenow_api_key}
+      SERVICENOW_CLIENT_ID=${env_servicenow_client_id}
+      SERVICENOW_CLIENT_SECRET=${env_servicenow_client_secret}
+
+      # AIOPS-INTELLIPORT SECRETS
+      OPENAI_API_KEY=${env_openai_api_key}
+      AZURE_OPENAI_API_KEY=${env_azure_openai_api_key}
+      JIRA_API_KEY=${env_jira_api_key}
+      GITHUB_API_KEY=${env_github_api_key}
+      ENCRYPTION_KEY=${env_encryption_key}
+
   - path: /root/show-versions.yml
     owner: root:root
     permissions: "0644"
@@ -186,4 +217,7 @@ runcmd:
   - [ ansible-playbook, /root/install-packages.yml, -v ]
   - [ echo, "Running ansible playbook: show-versions.yml..." ]
   - [ ansible-playbook, /root/show-versions.yml, -v ]
+  - [ echo, "Running ansible playbook: deploy-app.yml..." ]
+  - [ ansible-playbook, /root/deploy-app.yml, -v ]
   - [ echo, "Cloud-init runcmd execution finished successfully." ]
+
