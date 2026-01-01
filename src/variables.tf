@@ -93,3 +93,157 @@ variable "virtual_machine_os_disk_storage_account_type" {
   nullable    = false
   default     = "StandardSSD_LRS"
 }
+
+# Git Repository and Deployment Variables
+variable "git_repo_url" {
+  description = "Git repository URL to clone"
+  type        = string
+  nullable    = false
+  default     = "https://github.com/ai2MS/AIOps_GitOps.git"
+}
+
+variable "git_repo_branch" {
+  description = "Git repository branch to checkout"
+  type        = string
+  default     = "main"
+}
+
+variable "git_repo_clone_path" {
+  description = "Path where the git repository will be cloned"
+  type        = string
+  default     = "/opt/app"
+}
+
+variable "deployment_script_path" {
+  description = "Path to the shell script to run after cloning (relative to repo root)"
+  type        = string
+  default     = "deploy-dev.sh"
+}
+
+variable "git_personal_access_token" {
+  description = "GitHub Personal Access Token (PAT) for private repository authentication"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+# Environment Variables for .env file
+
+# GHCR Credentials
+variable "env_github_username" {
+  description = "GitHub username for GHCR authentication"
+  type        = string
+  default     = ""
+}
+
+variable "env_github_email" {
+  description = "GitHub email for GHCR authentication"
+  type        = string
+  default     = ""
+}
+
+# Infrastructure Secrets
+variable "env_postgres_password" {
+  description = "PostgreSQL database password"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+variable "env_redis_password" {
+  description = "Redis password"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+variable "env_qdrant_api_key" {
+  description = "Qdrant API key"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+# AIOPS-DYNATRACE-KAFKA Secrets
+variable "env_dynatrace_api_token" {
+  description = "Dynatrace API token"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+# AIOPS-MCPSVR-SNOW Secrets
+variable "env_servicenow_instance_url" {
+  description = "ServiceNow instance URL"
+  type        = string
+  default     = ""
+}
+
+variable "env_servicenow_username" {
+  description = "ServiceNow username"
+  type        = string
+  default     = ""
+}
+
+variable "env_servicenow_password" {
+  description = "ServiceNow password"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+variable "env_servicenow_api_key" {
+  description = "ServiceNow API key"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+variable "env_servicenow_client_id" {
+  description = "ServiceNow OAuth client ID"
+  type        = string
+  default     = ""
+}
+
+variable "env_servicenow_client_secret" {
+  description = "ServiceNow OAuth client secret"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+# AIOPS-INTELLIPORT Secrets
+variable "env_openai_api_key" {
+  description = "OpenAI API key"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+variable "env_azure_openai_api_key" {
+  description = "Azure OpenAI API key"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+variable "env_jira_api_key" {
+  description = "Jira API key"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+variable "env_github_api_key" {
+  description = "GitHub API key"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+variable "env_encryption_key" {
+  description = "Encryption key for secure data"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
