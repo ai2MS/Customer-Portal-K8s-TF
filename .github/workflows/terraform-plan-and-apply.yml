@@ -276,9 +276,13 @@ jobs:
         with:
           azcliversion: latest
           inlineScript: |
-            echo "az keyvault network-rule remove --resource-group ${{ inputs.resource_group_name }} --name ${{ inputs.key_vault_name }} --ip-address 0.0.0.0/0"
-            az keyvault network-rule remove --resource-group ${{ inputs.resource_group_name }} --name ${{ inputs.key_vault_name }} --ip-address 0.0.0.0/0
-
+            # Check if Key Vault exists before removing network rule
+            if az keyvault show --resource-group ${{ inputs.resource_group_name }} --name ${{ inputs.key_vault_name }} &>/dev/null; then
+              echo "Key Vault exists, removing network rule..."
+              az keyvault network-rule remove --resource-group ${{ inputs.resource_group_name }} --name ${{ inputs.key_vault_name }} --ip-address 0.0.0.0/0
+            else
+              echo "Key Vault does not exist, skipping network rule removal"
+            fi
   graph:
     name: Terraform Graph
     runs-on: ubuntu-latest
